@@ -5,10 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: backend
-    command: >
-      sh -c "python manage.py migrate &&
-             daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+    container_name: backend-mp
+    command: daphne -b 0.0.0.0 -p 8000 core.asgi:application
     volumes:
       - .:/app
     ports:
@@ -27,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: celery_worker
+    container_name: celery_worker-mp
     command: celery -A core worker -l info
     volumes:
       - .:/app
@@ -43,7 +41,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: celery_beat
+    container_name: celery_beat-mp
     command: celery -A core beat -l info
     volumes:
       - .:/app
@@ -56,28 +54,29 @@ services:
       - backend_net
 
   postgres:
-    image: postgres:15-alpine
-    container_name: postgres-2
+    image: postgres:17-alpine
+    container_name: postgres
     restart: always
+    mem_limit: 1g
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: medipro
-      POSTGRES_PASSWORD: medipro_pass
-      POSTGRES_DB: medipro_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medipro -d medipro_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d medipro"]
       interval: 10s
       timeout: 5s
       retries: 5
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: medipro
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
     networks:
       - backend_net
 
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: redis-mp
     restart: always
     ports:
       - "6379:6379"
